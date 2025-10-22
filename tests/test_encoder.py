@@ -147,9 +147,8 @@ class TestDeepSeekOCREncoder:
             eager_to_device=False,
         )
         
-        # Create a fake PDF path
+        # Create a fake PDF path (file doesn't need to exist since _pdf_to_images is mocked)
         pdf_path = tmp_path / "test.pdf"
-        pdf_path.touch()
         
         # Mock the PDF conversion to return test images
         test_images = [Image.new('RGB', (100, 100)) for _ in range(3)]
