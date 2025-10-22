@@ -90,7 +90,7 @@ class TestDeepSeekOCREncoder:
         call_args = mock_automodel.from_pretrained.call_args
         assert call_args[0][0] == "deepseek-ai/DeepSeek-OCR"
         assert call_args[1]["trust_remote_code"] == True
-        assert call_args[1]["use_safetensors"] == True
+        assert call_args[1]["use_safetensors"]
         assert call_args[1]["torch_dtype"] == torch.float32
         assert call_args[1]["attn_implementation"] == "eager"
         
