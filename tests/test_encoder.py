@@ -158,7 +158,7 @@ class TestDeepSeekOCREncoder:
         
         # Verify custom kwargs were passed through
         call_args = mock_automodel.from_pretrained.call_args
-        assert call_args[1]["low_cpu_mem_usage"] == True
+        assert call_args[1]["low_cpu_mem_usage"] is True
         assert call_args[1]["revision"] == "main"
 
 
