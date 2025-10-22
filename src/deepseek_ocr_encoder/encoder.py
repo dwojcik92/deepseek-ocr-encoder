@@ -183,8 +183,7 @@ class DeepSeekOCREncoder(torch.nn.Module):
             pdf_document = fitz.open(pdf_path)
             
             # Convert each page to an image
-            for page_num in range(len(pdf_document)):
-                page = pdf_document[page_num]
+            for page in pdf_document:
                 # Render page to an image (matrix for higher DPI)
                 # Using 2.0 scale factor for good quality (equivalent to 144 DPI)
                 mat = fitz.Matrix(2.0, 2.0)
