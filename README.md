@@ -10,6 +10,18 @@ A handy and elastic encoder for vision tasks based on DeepSeek-OCR. This package
 - ⚡ **Fast Inference**: Support for BF16, channels_last memory layout, and optional CUDA graph capture
 - 🔧 **Flexible**: Configurable device, dtype, and optimization settings
 
+## About DeepSeek-OCR
+
+This encoder is based on [DeepSeek-OCR](https://github.com/deepseek-ai/DeepSeek-OCR), a state-of-the-art vision-language model designed for optical character recognition and document understanding. The recent paper ["DeepSeek-OCR: Contexts Optical Compression"](https://arxiv.org/html/2510.18234v1) (arXiv:2510.18234v1) introduces innovative optical compression techniques for long text contexts using vision tokens.
+
+**Key highlights from the paper:**
+- 📊 **High Precision OCR**: Achieves up to ~97% OCR precision at less than 10× compression
+- 🗜️ **Efficient Compression**: Maintains ~60% precision even at 20× compression ratios
+- 📈 **Strong Benchmark Results**: Significant improvements on OmniDocBench
+- ⚡ **High-Throughput Data Generation**: Enables efficient processing of large document datasets
+
+This encoder package provides an optimized implementation for extracting vision tokens from the DeepSeek-OCR model, making it easy to integrate into your own applications.
+
 ## Installation
 
 ### Using uv (recommended)
@@ -225,15 +237,28 @@ MIT
 
 ## Citation
 
-If you use this encoder in your research, please cite the original DeepSeek-OCR paper:
+If you use this encoder in your research, please cite the DeepSeek-OCR papers:
 
 ```bibtex
+@article{deepseek-ocr-compression,
+  title={DeepSeek-OCR: Contexts Optical Compression},
+  author={DeepSeek-AI},
+  journal={arXiv preprint arXiv:2510.18234},
+  year={2025}
+}
+
 @article{deepseek-ocr,
   title={DeepSeek-OCR: Efficient Vision-Language Model for OCR},
   author={DeepSeek-AI},
   year={2024}
 }
 ```
+
+## Resources
+
+- 📄 **Paper**: [DeepSeek-OCR: Contexts Optical Compression](https://arxiv.org/html/2510.18234v1) (arXiv:2510.18234v1)
+- 💻 **Official Repository**: [DeepSeek-OCR on GitHub](https://github.com/deepseek-ai/DeepSeek-OCR)
+- 🤗 **Model**: [deepseek-ai/DeepSeek-OCR on Hugging Face](https://huggingface.co/deepseek-ai/DeepSeek-OCR)
 
 ## Contributing
 
