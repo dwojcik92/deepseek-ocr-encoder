@@ -34,6 +34,23 @@ pip install -e .
 
 ## Quick Start
 
+### Simple One-Line Initialization (Recommended)
+
+```python
+from deepseek_ocr_encoder import DeepSeekOCREncoder
+
+# One-line initialization - automatically handles device, dtype, and model loading
+encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR")
+
+# Encode an image
+vision_tokens = encoder("your_image.png")
+# Returns: torch.Tensor of shape [1, N, 1024] where N=256 for 1024x1024 input
+```
+
+### Advanced Usage with Manual Model Loading
+
+If you need more control over the model loading process:
+
 ```python
 from transformers import AutoModel
 import torch
@@ -81,6 +98,44 @@ vision_tokens = encoder(img)  # Shorthand for encoder.encode(img)
 
 The main encoder class that wraps the DeepSeek-OCR model for efficient vision token extraction.
 
+#### Class Methods
+
+##### `from_pretrained(model_name_or_path: str, **kwargs) -> DeepSeekOCREncoder`
+
+**(Recommended)** Load a DeepSeek-OCR model and wrap it with the optimized encoder in one line.
+
+**Parameters:**
+- `model_name_or_path` (str, required): Model identifier from Hugging Face Hub (e.g., "deepseek-ai/DeepSeek-OCR") or path to a local checkpoint
+- `device` (Optional[Union[str, torch.device]]): Target device (default: auto-detect cuda if available, else cpu)
+- `dtype` (Optional[torch.dtype]): Data type for computation (default: bfloat16 on cuda, float32 on cpu)
+- `freeze` (bool): Whether to freeze encoder parameters (default: True)
+- `eager_to_device` (bool): Move model to device immediately (default: True)
+- `precompute_pos_for_1024` (bool): Pre-compute position embeddings for 1024x1024 input (default: True)
+- `use_compile` (bool): Enable torch.compile for better performance (requires PyTorch 2.3+, default: False)
+- `trust_remote_code` (bool): Whether to trust remote code when loading model (default: True)
+- `use_safetensors` (bool): Whether to use safetensors format (default: True)
+- `attn_implementation` (str): Attention implementation to use (default: "eager")
+- `**model_kwargs`: Additional keyword arguments passed to AutoModel.from_pretrained()
+
+**Returns:**
+- Initialized `DeepSeekOCREncoder` ready for inference
+
+**Example:**
+```python
+# Simple usage
+encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR")
+
+# With custom device/dtype
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    device="cpu",
+    dtype=torch.float32
+)
+
+# From local checkpoint
+encoder = DeepSeekOCREncoder.from_pretrained("./my-finetuned-model")
+```
+
 #### Constructor Parameters
 
 - `full_model` (required): The full DeepSeek-OCR model loaded from transformers
@@ -91,7 +146,7 @@ The main encoder class that wraps the DeepSeek-OCR model for efficient vision to
 - `precompute_pos_for_1024` (bool): Pre-compute position embeddings for 1024x1024 input (default: True)
 - `use_compile` (bool): Enable torch.compile for better performance (requires PyTorch 2.3+)
 
-#### Methods
+#### Instance Methods
 
 ##### `encode(image: Union[Image.Image, str, os.PathLike]) -> torch.Tensor`
 
