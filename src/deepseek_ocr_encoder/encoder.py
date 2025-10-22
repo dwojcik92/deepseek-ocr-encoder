@@ -13,6 +13,7 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
+from transformers import AutoModel
 
 try:
     import fitz  # PyMuPDF
@@ -136,6 +137,103 @@ class DeepSeekOCREncoder(torch.nn.Module):
         self._graph = None
         self._static_in = None
         self._static_out = None
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        model_name_or_path: str,
+        device: Optional[Union[str, torch.device]] = None,
+        dtype: Optional[torch.dtype] = None,
+        freeze: bool = True,
+        eager_to_device: bool = True,
+        precompute_pos_for_1024: bool = True,
+        use_compile: bool = False,
+        trust_remote_code: bool = True,
+        use_safetensors: bool = True,
+        attn_implementation: str = "eager",
+        **model_kwargs,
+    ):
+        """
+        Load a DeepSeek-OCR model and wrap it with the optimized encoder.
+
+        This is a convenience method that handles the full initialization pipeline:
+        - Downloads/loads the DeepSeek-OCR model from Hugging Face or local path
+        - Automatically detects CUDA/CPU and sets the device
+        - Sets recommended defaults (bfloat16 on CUDA, float32 on CPU)
+        - Wraps the model with the optimized encoder
+
+        Args:
+            model_name_or_path: Model identifier from Hugging Face Hub (e.g., "deepseek-ai/DeepSeek-OCR")
+                or path to a local checkpoint directory
+            device: Target device (default: auto-detect cuda if available, else cpu)
+            dtype: Data type for computation (default: bfloat16 on cuda, float32 on cpu)
+            freeze: Whether to freeze encoder parameters (default: True)
+            eager_to_device: Move model to device immediately (default: True)
+            precompute_pos_for_1024: Pre-compute position embeddings for 1024x1024 input (default: True)
+            use_compile: Enable torch.compile for better performance (requires PyTorch 2.3+)
+            trust_remote_code: Whether to trust remote code when loading model (default: True)
+            use_safetensors: Whether to use safetensors format (default: True)
+            attn_implementation: Attention implementation to use (default: "eager")
+            **model_kwargs: Additional keyword arguments to pass to AutoModel.from_pretrained()
+
+        Returns:
+            DeepSeekOCREncoder: Initialized encoder ready for inference
+
+        Example:
+            >>> from deepseek_ocr_encoder import DeepSeekOCREncoder
+            >>> 
+            >>> # One-line initialization
+            >>> encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR")
+            >>> 
+            >>> # Encode an image
+            >>> tokens = encoder("image.png")  # Returns [1, N, 1024] tensor
+            >>> 
+            >>> # Encode a PDF
+            >>> tokens_list = encoder("document.pdf")  # Returns list of [1, N, 1024] tensors
+            >>> 
+            >>> # Custom device/dtype
+            >>> encoder = DeepSeekOCREncoder.from_pretrained(
+            ...     "deepseek-ai/DeepSeek-OCR",
+            ...     device="cpu",
+            ...     dtype=torch.float32
+            ... )
+            >>> 
+            >>> # Load from local checkpoint
+            >>> encoder = DeepSeekOCREncoder.from_pretrained("./my-finetuned-model")
+        """
+        # Auto-detect device if not specified
+        if device is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            device = torch.device(device)
+
+        # Set default dtype based on device if not specified
+        if dtype is None:
+            dtype = torch.bfloat16 if device.type == "cuda" else torch.float32
+
+        # Load the full model from Hugging Face or local path
+        model = AutoModel.from_pretrained(
+            model_name_or_path,
+            trust_remote_code=trust_remote_code,
+            use_safetensors=use_safetensors,
+            torch_dtype=dtype,
+            attn_implementation=attn_implementation,
+            **model_kwargs,
+        )
+        
+        # Set model to eval mode and move to device
+        model = model.eval().to(device, dtype=dtype)
+
+        # Create and return the encoder wrapper
+        return cls(
+            full_model=model,
+            device=device,
+            dtype=dtype,
+            freeze=freeze,
+            eager_to_device=eager_to_device,
+            precompute_pos_for_1024=precompute_pos_for_1024,
+            use_compile=use_compile,
+        )
 
     @staticmethod
     def _is_pdf(file_path: Union[str, bytes, "os.PathLike"]) -> bool:
