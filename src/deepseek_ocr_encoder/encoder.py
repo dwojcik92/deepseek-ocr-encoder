@@ -7,7 +7,7 @@ An optimized, memory-lean encoder that combines SAM-base with CLIP for vision to
 import io
 import math
 import os
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -40,6 +40,14 @@ class DeepSeekOCREncoder(torch.nn.Module):
         eager_to_device: bool = True,
         precompute_pos_for_1024: bool = True,
         use_compile: bool = False,
+        # New preprocessing configuration parameters
+        preprocessing_transform: Optional[Callable[[Image.Image], torch.Tensor]] = None,
+        resize_size: Optional[Union[int, Tuple[int, int]]] = (1024, 1024),
+        resize_interpolation: transforms.InterpolationMode = transforms.InterpolationMode.BICUBIC,
+        resize_antialias: bool = True,
+        normalization_mean: Optional[Tuple[float, float, float]] = None,
+        normalization_std: Optional[Tuple[float, float, float]] = None,
+        skip_default_preprocessing: bool = False,
     ):
         """
         Initialize the DeepSeek OCR Encoder.
@@ -52,6 +60,18 @@ class DeepSeekOCREncoder(torch.nn.Module):
             eager_to_device: Move model to device immediately (default: True)
             precompute_pos_for_1024: Pre-compute position embeddings for 1024x1024 input (default: True)
             use_compile: Enable torch.compile for better performance (requires PyTorch 2.3+)
+            preprocessing_transform: Custom preprocessing transform function that takes a PIL Image 
+                and returns a torch.Tensor. If provided, overrides all other preprocessing options.
+            resize_size: Target size for resizing. Can be int (square) or (height, width) tuple.
+                Default: (1024, 1024). Set to None to keep native resolution.
+            resize_interpolation: Interpolation mode for resizing (default: BICUBIC)
+            resize_antialias: Whether to use antialiasing during resize (default: True)
+            normalization_mean: Mean values for normalization (R, G, B). 
+                Default: CLIP normalization (0.48145466, 0.4578275, 0.40821073)
+            normalization_std: Std values for normalization (R, G, B).
+                Default: CLIP normalization (0.26862954, 0.26130258, 0.27577711)
+            skip_default_preprocessing: If True, images must be preprocessed externally and passed 
+                as torch.Tensor. Use with caution - ensure proper format [C, H, W].
         """
         super().__init__()
 
@@ -86,21 +106,49 @@ class DeepSeekOCREncoder(torch.nn.Module):
         _safe_del(full_model, "text_model")
         _safe_del(full_model, "lm_head")
 
-        # If you want N=256 like the paper figure, feed 1024×1024.
-        self._preproc_1024 = transforms.Compose([
-            transforms.Resize(
-                (1024, 1024),
-                interpolation=transforms.InterpolationMode.BICUBIC,
-                antialias=True
-            ),
-            transforms.ToTensor(),
-            # Use the SAM/CLIP-normalization your training used.
-            # If unsure, CLIP's works well in practice:
-            transforms.Normalize(
-                mean=(0.48145466, 0.4578275, 0.40821073),
-                std=(0.26862954, 0.26130258, 0.27577711)
-            ),
-        ])
+        # Configure preprocessing pipeline
+        self._skip_default_preprocessing = skip_default_preprocessing
+        
+        if preprocessing_transform is not None:
+            # User provided a custom transform - use it directly
+            self._preproc_1024 = preprocessing_transform
+        elif not skip_default_preprocessing:
+            # Build default preprocessing with configurable parameters
+            
+            # Set default values
+            if normalization_mean is None:
+                normalization_mean = (0.48145466, 0.4578275, 0.40821073)  # CLIP defaults
+            if normalization_std is None:
+                normalization_std = (0.26862954, 0.26130258, 0.27577711)  # CLIP defaults
+            
+            # Build transform pipeline
+            transform_steps = []
+            
+            # Add resize if specified
+            if resize_size is not None:
+                transform_steps.append(
+                    transforms.Resize(
+                        resize_size,
+                        interpolation=resize_interpolation,
+                        antialias=resize_antialias
+                    )
+                )
+            
+            # Always convert to tensor
+            transform_steps.append(transforms.ToTensor())
+            
+            # Add normalization
+            transform_steps.append(
+                transforms.Normalize(
+                    mean=normalization_mean,
+                    std=normalization_std
+                )
+            )
+            
+            self._preproc_1024 = transforms.Compose(transform_steps)
+        else:
+            # Skip preprocessing - user will provide tensors directly
+            self._preproc_1024 = None
 
         if freeze:
             for m in [self.sam, self.clip_pre, self.clip_tr]:
@@ -151,6 +199,14 @@ class DeepSeekOCREncoder(torch.nn.Module):
         trust_remote_code: bool = True,
         use_safetensors: bool = True,
         attn_implementation: str = "eager",
+        # Preprocessing configuration
+        preprocessing_transform: Optional[Callable[[Image.Image], torch.Tensor]] = None,
+        resize_size: Optional[Union[int, Tuple[int, int]]] = None,
+        resize_interpolation: transforms.InterpolationMode = transforms.InterpolationMode.BICUBIC,
+        resize_antialias: bool = True,
+        normalization_mean: Optional[Tuple[float, float, float]] = None,
+        normalization_std: Optional[Tuple[float, float, float]] = None,
+        skip_default_preprocessing: bool = False,
         **model_kwargs,
     ):
         """
@@ -174,6 +230,18 @@ class DeepSeekOCREncoder(torch.nn.Module):
             trust_remote_code: Whether to trust remote code when loading model (default: True)
             use_safetensors: Whether to use safetensors format (default: True)
             attn_implementation: Attention implementation to use (default: "eager")
+            preprocessing_transform: Custom preprocessing transform function that takes a PIL Image 
+                and returns a torch.Tensor. If provided, overrides all other preprocessing options.
+            resize_size: Target size for resizing. Can be int (square) or (height, width) tuple.
+                Default: (1024, 1024). Set to None to keep native resolution.
+            resize_interpolation: Interpolation mode for resizing (default: BICUBIC)
+            resize_antialias: Whether to use antialiasing during resize (default: True)
+            normalization_mean: Mean values for normalization (R, G, B). 
+                Default: CLIP normalization (0.48145466, 0.4578275, 0.40821073)
+            normalization_std: Std values for normalization (R, G, B).
+                Default: CLIP normalization (0.26862954, 0.26130258, 0.27577711)
+            skip_default_preprocessing: If True, images must be preprocessed externally and passed 
+                as torch.Tensor. Use with caution - ensure proper format [C, H, W].
             **model_kwargs: Additional keyword arguments to pass to AutoModel.from_pretrained()
 
         Returns:
@@ -233,6 +301,13 @@ class DeepSeekOCREncoder(torch.nn.Module):
             eager_to_device=eager_to_device,
             precompute_pos_for_1024=precompute_pos_for_1024,
             use_compile=use_compile,
+            preprocessing_transform=preprocessing_transform,
+            resize_size=resize_size,
+            resize_interpolation=resize_interpolation,
+            resize_antialias=resize_antialias,
+            normalization_mean=normalization_mean,
+            normalization_std=normalization_std,
+            skip_default_preprocessing=skip_default_preprocessing,
         )
 
     @staticmethod
@@ -360,23 +435,47 @@ class DeepSeekOCREncoder(torch.nn.Module):
         # Single image encoding (original behavior)
         return self._encode_single_image(image)
 
-    def _encode_single_image(self, image: Union[Image.Image, str, "os.PathLike"]) -> torch.Tensor:
+    def _encode_single_image(self, image: Union[Image.Image, str, "os.PathLike", torch.Tensor]) -> torch.Tensor:
         """
         Encode a single image into vision tokens.
 
         Args:
-            image: PIL Image or path to an RGB image file
+            image: PIL Image, path to an RGB image file, or preprocessed torch.Tensor [C, H, W]
 
         Returns:
-            Vision tokens tensor of shape [1, N, 1024] where N=256 for 1024x1024 input
+            Vision tokens tensor of shape [1, N, 1024] where N depends on input size
         """
-        if isinstance(image, (str, bytes)):
-            img = Image.open(image).convert("RGB")
+        # Handle pre-processed tensor input
+        if isinstance(image, torch.Tensor):
+            if self._skip_default_preprocessing:
+                # User provided a preprocessed tensor
+                if image.dim() == 3:
+                    x_cpu = image.unsqueeze(0).pin_memory()  # [1, C, H, W]
+                elif image.dim() == 4:
+                    x_cpu = image.pin_memory()  # [B, C, H, W]
+                else:
+                    raise ValueError(f"Tensor input must be 3D [C,H,W] or 4D [B,C,H,W], got shape {image.shape}")
+            else:
+                raise ValueError(
+                    "Tensor input is only allowed when skip_default_preprocessing=True. "
+                    "Pass PIL Image or file path instead, or set skip_default_preprocessing=True."
+                )
         else:
-            img = image.convert("RGB")
+            # Handle PIL Image or file path
+            if isinstance(image, (str, bytes)):
+                img = Image.open(image).convert("RGB")
+            else:
+                img = image.convert("RGB")
 
-        # CPU preproc → pinned → non_blocking H2D
-        x_cpu = self._preproc_1024(img).unsqueeze(0).pin_memory()  # [1,3,1024,1024] on CPU
+            if self._preproc_1024 is None:
+                raise RuntimeError(
+                    "No preprocessing transform configured. Either set skip_default_preprocessing=False "
+                    "or provide a custom preprocessing_transform."
+                )
+
+            # CPU preproc → pinned → non_blocking H2D
+            x_cpu = self._preproc_1024(img).unsqueeze(0).pin_memory()  # [1,C,H,W] on CPU
+        
         x = x_cpu.to(self.device, dtype=self.dtype, non_blocking=True)  # -> GPU BF16
         x = x.to(memory_format=torch.channels_last)  # NHWC memory layout
 
