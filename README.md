@@ -196,6 +196,123 @@ Capture a CUDA graph for optimized steady-state inference. Call this once after 
 
 Convenience method, equivalent to `encode()`. Supports both single images and multi-page PDFs.
 
+## Custom Preprocessing Hooks
+
+The encoder now supports configurable preprocessing, allowing you to customize the image preprocessing pipeline without forking the codebase. This is useful for:
+- Using native image resolutions
+- Applying domain-specific preprocessing (medical images, documents, etc.)
+- Reusing existing preprocessing pipelines
+- Fine-tuning preprocessing parameters
+
+### Basic Examples
+
+#### Custom Resize Dimensions
+
+```python
+# Use 512x512 instead of default 1024x1024
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    resize_size=(512, 512)
+)
+
+# Keep native resolution (no resizing)
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    resize_size=None
+)
+
+# Use non-square dimensions
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    resize_size=(768, 1024)  # (height, width)
+)
+```
+
+#### Custom Normalization
+
+```python
+# Use ImageNet normalization instead of CLIP
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    normalization_mean=(0.485, 0.456, 0.406),
+    normalization_std=(0.229, 0.224, 0.225)
+)
+```
+
+#### Custom Interpolation Mode
+
+```python
+from torchvision import transforms
+
+# Use LANCZOS for higher quality
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    resize_interpolation=transforms.InterpolationMode.LANCZOS,
+    resize_antialias=True
+)
+```
+
+### Advanced: Custom Preprocessing Transform
+
+For full control, provide your own preprocessing function:
+
+```python
+from torchvision import transforms
+from PIL import Image
+import torch
+
+def my_preprocessing(img: Image.Image) -> torch.Tensor:
+    """Custom preprocessing with domain-specific augmentations."""
+    transform = transforms.Compose([
+        transforms.Resize((1024, 1024)),
+        transforms.ColorJitter(brightness=0.1, contrast=0.2),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=(0.48145466, 0.4578275, 0.40821073),
+            std=(0.26862954, 0.26130258, 0.27577711)
+        ),
+    ])
+    return transform(img)
+
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    preprocessing_transform=my_preprocessing
+)
+```
+
+### Pre-processed Tensor Input
+
+If you need to preprocess images externally (e.g., in a batched data pipeline):
+
+```python
+# Create encoder that accepts pre-processed tensors
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    skip_default_preprocessing=True
+)
+
+# Your external preprocessing
+img = Image.open("image.jpg").convert("RGB")
+preprocessed = my_external_pipeline(img)  # Returns torch.Tensor [C, H, W]
+
+# Encode the pre-processed tensor
+tokens = encoder._encode_single_image(preprocessed)
+```
+
+### Preprocessing Parameters
+
+When using `from_pretrained()` or the constructor, you can configure:
+
+- `preprocessing_transform`: Custom callable that takes PIL Image and returns torch.Tensor (overrides all other settings)
+- `resize_size`: Target size (int or tuple). Default: (1024, 1024). Set to None for native resolution
+- `resize_interpolation`: Interpolation mode (default: `BICUBIC`)
+- `resize_antialias`: Enable antialiasing during resize (default: True)
+- `normalization_mean`: RGB mean values (default: CLIP normalization)
+- `normalization_std`: RGB std values (default: CLIP normalization)
+- `skip_default_preprocessing`: If True, accept only pre-processed tensors (default: False)
+
+See `examples/custom_preprocessing.py` for more detailed examples.
+
 ## Architecture
 
 The encoder implements the following pipeline:
