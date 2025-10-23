@@ -23,8 +23,9 @@ classifiers = [
 dependencies = [
     "torch>=2.0.0",
     "torchvision>=0.15.0",
-    "transformers>=4.30.0",
+    "transformers>=4.30.0,<4.48.0",
     "pillow>=9.0.0",
+    "packaging>=20.0",
     "pymupdf>=1.23.0",
 ]
 
