@@ -25,30 +25,22 @@ This encoder package provides an optimized implementation for extracting vision 
 
 ## Installation
 
-### Using uv (recommended)
+```bash
+uv add deepseek-ocr-encoder
+```
+
+Or install from source:
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/dwojcik92/deepseek-ocr-encoder.git
 cd deepseek-ocr-encoder
-
-# Install with uv
 uv pip install .
-
-# Or install with dev dependencies
-uv pip install ".[dev]"
 ```
 
-### Using pip
+**Important:** This package requires `transformers>=4.30.0,<4.48.0`. If you have a newer version already installed, you may need to downgrade:
 
 ```bash
-pip install .
-```
-
-**Important:** This package requires `transformers>=4.30.0,<4.48.0`. The installation will automatically install a compatible version. If you have a newer version of transformers already installed, you may need to downgrade:
-
-```bash
-pip install 'transformers>=4.30.0,<4.48.0'
+uv pip install 'transformers>=4.30.0,<4.48.0'
 ```
 
 ## Quick Start
@@ -164,16 +156,6 @@ encoder = DeepSeekOCREncoder.from_pretrained(
 encoder = DeepSeekOCREncoder.from_pretrained("./my-finetuned-model")
 ```
 
-#### Constructor Parameters
-
-- `full_model` (required): The full DeepSeek-OCR model loaded from transformers
-- `device` (Optional[Union[str, torch.device]]): Target device (default: cuda if available, else cpu)
-- `dtype` (torch.dtype): Data type for computation (default: torch.bfloat16)
-- `freeze` (bool): Whether to freeze encoder parameters (default: True)
-- `eager_to_device` (bool): Move model to device immediately (default: True)
-- `precompute_pos_for_1024` (bool): Pre-compute position embeddings for 1024x1024 input (default: True)
-- `use_compile` (bool): Enable torch.compile for better performance (requires PyTorch 2.3+)
-
 #### Instance Methods
 
 ##### `encode(image: Union[Image.Image, str, os.PathLike]) -> Union[torch.Tensor, List[torch.Tensor]]`
@@ -244,42 +226,18 @@ This encoder includes several optimizations:
 - Pillow ≥ 9.0.0
 - PyMuPDF ≥ 1.23.0 (for PDF support)
 
-> **Note:** The package requires transformers version < 4.48.0 due to API changes in newer versions. We recommend using transformers==4.47.0 for optimal compatibility.
-
 ## Troubleshooting
 
 ### ImportError: cannot import name 'LlamaFlashAttention2'
 
-If you encounter this error:
-```
-ImportError: cannot import name 'LlamaFlashAttention2' from 'transformers.models.llama.modeling_llama'
-```
-
-This is caused by incompatible transformers versions. The `LlamaFlashAttention2` class was removed in transformers 4.48.0 and later versions.
+If you encounter this error, it's caused by incompatible transformers versions. The `LlamaFlashAttention2` class was removed in transformers 4.48.0+.
 
 **Solution:**
-
-Install a compatible version of transformers:
 ```bash
-pip install 'transformers>=4.30.0,<4.48.0'
+uv pip install 'transformers>=4.30.0,<4.48.0'
 ```
 
-We recommend using transformers==4.47.0:
-```bash
-pip install transformers==4.47.0
-```
-
-**Why this happens:**
-
-The DeepSeek-OCR model uses specific attention mechanisms that were refactored in transformers 4.48.0+. The model code (loaded via `trust_remote_code=True`) references `LlamaFlashAttention2`, which is only available in transformers versions 4.30.0 through 4.47.x.
-
-### Version Validation
-
-When you import the package, it will automatically check your transformers version and display a warning if an incompatible version is detected:
-
-```python
-from deepseek_ocr_encoder import DeepSeekOCREncoder  # Warning displayed if version incompatible
-```
+The DeepSeek-OCR model uses specific attention mechanisms that were refactored in transformers 4.48.0+. The model code references `LlamaFlashAttention2`, which is only available in transformers versions 4.30.0 through 4.47.x.
 
 ## Development
 
@@ -289,12 +247,6 @@ uv pip install -e ".[dev]"
 
 # Run tests
 pytest
-
-# Format code
-black src/
-
-# Lint
-ruff check src/
 ```
 
 ## License
@@ -311,12 +263,6 @@ If you use this encoder in your research, please cite the DeepSeek-OCR papers:
   author={DeepSeek-AI},
   journal={arXiv preprint arXiv:2510.18234},
   year={2025}
-}
-
-@article{deepseek-ocr,
-  title={DeepSeek-OCR: Efficient Vision-Language Model for OCR},
-  author={DeepSeek-AI},
-  year={2024}
 }
 ```
 
