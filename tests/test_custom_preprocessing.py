@@ -26,9 +26,11 @@ class TestCustomPreprocessingHooks:
         vision.transformer = MagicMock()
         vision.transformer.return_value = torch.randn(1, 256, 1024)
         
-        # Mock position embeddings
+        # Mock position embeddings - need actual tensor that can be registered as buffer
         pos_weight = torch.randn(257, 1024)
-        vision.embeddings.position_embedding.weight = pos_weight
+        mock_weight = MagicMock()
+        mock_weight.detach.return_value = pos_weight
+        vision.embeddings.position_embedding.weight = mock_weight
         
         base.vision_model = vision
         mock.base_model = base
@@ -179,7 +181,9 @@ class TestCustomPreprocessingHooks:
 
     def test_custom_preprocessing_with_from_pretrained(self, mock_model):
         """Test custom preprocessing with from_pretrained class method."""
-        with pytest.mock.patch("deepseek_ocr_encoder.encoder.AutoModel") as mock_automodel:
+        from unittest.mock import patch
+        
+        with patch("deepseek_ocr_encoder.encoder.AutoModel") as mock_automodel:
             mock_automodel.from_pretrained.return_value = mock_model
             
             # Test with custom resize

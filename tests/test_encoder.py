@@ -27,9 +27,11 @@ class TestDeepSeekOCREncoder:
         vision.transformer = MagicMock()
         vision.transformer.return_value = torch.randn(1, 256, 1024)
         
-        # Mock position embeddings
+        # Mock position embeddings - need actual tensor that can be registered as buffer
         pos_weight = torch.randn(257, 1024)
-        vision.embeddings.position_embedding.weight = pos_weight
+        mock_weight = MagicMock()
+        mock_weight.detach.return_value = pos_weight
+        vision.embeddings.position_embedding.weight = mock_weight
         
         base.vision_model = vision
         mock.base_model = base
@@ -169,7 +171,6 @@ class TestDeepSeekOCREncoder:
         """Test PDF to images conversion."""
         # Create mock PDF document with 2 pages
         mock_pdf = MagicMock()
-        mock_pdf.__len__.return_value = 2
         
         # Mock pages
         mock_page1 = MagicMock()
@@ -193,8 +194,10 @@ class TestDeepSeekOCREncoder:
         mock_page1.get_pixmap.return_value = mock_pix1
         mock_page2.get_pixmap.return_value = mock_pix2
         
-        mock_pdf.__getitem__.side_effect = [mock_page1, mock_page2]
+        # Set up iteration over PDF pages
+        mock_pdf.__iter__.return_value = iter([mock_page1, mock_page2])
         mock_fitz.open.return_value = mock_pdf
+        mock_fitz.Matrix.return_value = MagicMock()
         
         # Test conversion
         pdf_path = tmp_path / "test.pdf"
