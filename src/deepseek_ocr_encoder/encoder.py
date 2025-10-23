@@ -42,7 +42,7 @@ class DeepSeekOCREncoder(torch.nn.Module):
         use_compile: bool = False,
         # New preprocessing configuration parameters
         preprocessing_transform: Optional[Callable[[Image.Image], torch.Tensor]] = None,
-        resize_size: Optional[Union[int, Tuple[int, int]]] = None,
+        resize_size: Optional[Union[int, Tuple[int, int]]] = (1024, 1024),
         resize_interpolation: transforms.InterpolationMode = transforms.InterpolationMode.BICUBIC,
         resize_antialias: bool = True,
         normalization_mean: Optional[Tuple[float, float, float]] = None,
@@ -116,8 +116,6 @@ class DeepSeekOCREncoder(torch.nn.Module):
             # Build default preprocessing with configurable parameters
             
             # Set default values
-            if resize_size is None:
-                resize_size = (1024, 1024)
             if normalization_mean is None:
                 normalization_mean = (0.48145466, 0.4578275, 0.40821073)  # CLIP defaults
             if normalization_std is None:
