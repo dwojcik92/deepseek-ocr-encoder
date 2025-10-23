@@ -1,6 +1,6 @@
 [project]
 name = "deepseek-ocr-encoder"
-version = "0.0.2"
+version = "0.2.1"
 description = "A handy and elastic encoder for DeepSeek OCR vision tasks"
 readme = "README.md"
 requires-python = ">=3.12"
