@@ -22,7 +22,7 @@ def simple_usage_example():
     
     # One-line initialization - automatically handles device, dtype, and model loading
     print("Loading encoder with from_pretrained()...")
-    encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR")
+    encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR", resize_size=True)
     print(f"✓ Encoder loaded! Using device: {encoder.device}, dtype: {encoder.dtype}")
     
     # Optional: Capture CUDA graph for faster inference (CUDA only)
