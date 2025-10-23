@@ -9,6 +9,7 @@ A handy and elastic encoder for vision tasks based on DeepSeek-OCR. This package
 - 🎯 **Easy to Use**: Simple API - just import and encode
 - ⚡ **Fast Inference**: Support for BF16, channels_last memory layout, and optional CUDA graph capture
 - 🔧 **Flexible**: Configurable device, dtype, and optimization settings
+- 📄 **PDF Support**: Encode multi-page PDF documents with automatic page-to-image conversion
 
 ## About DeepSeek-OCR
 
@@ -102,6 +103,15 @@ vision_tokens = encoder.encode(image_path)
 # Or use with PIL Image
 img = Image.open(image_path).convert("RGB")
 vision_tokens = encoder(img)  # Shorthand for encoder.encode(img)
+
+# Encode a PDF document (multi-page support)
+pdf_path = "document.pdf"
+vision_tokens_list = encoder.encode(pdf_path)
+# Returns: List of torch.Tensor, one per page, each of shape [1, N, 1024]
+
+# Process each page
+for page_num, page_tokens in enumerate(vision_tokens_list):
+    print(f"Page {page_num + 1}: {page_tokens.shape}")
 ```
 
 ## API Reference
@@ -160,15 +170,27 @@ encoder = DeepSeekOCREncoder.from_pretrained("./my-finetuned-model")
 
 #### Instance Methods
 
-##### `encode(image: Union[Image.Image, str, os.PathLike]) -> torch.Tensor`
+##### `encode(image: Union[Image.Image, str, os.PathLike]) -> Union[torch.Tensor, List[torch.Tensor]]`
 
-Encode an image into vision tokens.
+Encode an image or PDF into vision tokens.
 
 **Parameters:**
-- `image`: PIL Image or path to an RGB image file
+- `image`: PIL Image, path to an RGB image file, or path to a PDF file
 
 **Returns:**
-- Vision tokens tensor of shape `[1, N, 1024]` where N=256 for 1024×1024 input
+- For single images: Vision tokens tensor of shape `[1, N, 1024]` where N=256 for 1024×1024 input
+- For PDFs: List of vision token tensors, one per page, each of shape `[1, N, 1024]`
+
+**Example:**
+```python
+# Single image
+tokens = encoder.encode("image.png")  # Returns torch.Tensor
+
+# Multi-page PDF
+tokens_list = encoder.encode("document.pdf")  # Returns List[torch.Tensor]
+for page_tokens in tokens_list:
+    print(f"Page shape: {page_tokens.shape}")
+```
 
 ##### `capture_cudagraph(batch_size: int = 1, H: int = 1024, W: int = 1024)`
 
@@ -182,9 +204,9 @@ Capture a CUDA graph for optimized steady-state inference. Call this once after 
 **Raises:**
 - `RuntimeError`: If device is not CUDA
 
-##### `__call__(image: Union[Image.Image, str, os.PathLike]) -> torch.Tensor`
+##### `__call__(image: Union[Image.Image, str, os.PathLike]) -> Union[torch.Tensor, List[torch.Tensor]]`
 
-Convenience method, equivalent to `encode()`.
+Convenience method, equivalent to `encode()`. Supports both single images and multi-page PDFs.
 
 ## Architecture
 
@@ -214,6 +236,7 @@ This encoder includes several optimizations:
 - torchvision ≥ 0.15.0
 - transformers ≥ 4.30.0
 - Pillow ≥ 9.0.0
+- PyMuPDF ≥ 1.23.0 (for PDF support)
 
 ## Development
 

@@ -4,15 +4,22 @@ DeepSeek OCR Encoder
 An optimized, memory-lean encoder that combines SAM-base with CLIP for vision token generation.
 """
 
+import io
 import math
 import os
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import torch
 import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
 from transformers import AutoModel
+
+try:
+    import fitz  # PyMuPDF
+    HAS_PYMUPDF = True
+except ImportError:
+    HAS_PYMUPDF = False
 
 
 class DeepSeekOCREncoder(torch.nn.Module):
@@ -179,7 +186,10 @@ class DeepSeekOCREncoder(torch.nn.Module):
             >>> encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR")
             >>> 
             >>> # Encode an image
-            >>> tokens = encoder("document.pdf")  # Returns [1, N, 1024] tensor
+            >>> tokens = encoder("image.png")  # Returns [1, N, 1024] tensor
+            >>> 
+            >>> # Encode a PDF
+            >>> tokens_list = encoder("document.pdf")  # Returns list of [1, N, 1024] tensors
             >>> 
             >>> # Custom device/dtype
             >>> encoder = DeepSeekOCREncoder.from_pretrained(
@@ -225,6 +235,70 @@ class DeepSeekOCREncoder(torch.nn.Module):
             use_compile=use_compile,
         )
 
+    @staticmethod
+    def _is_pdf(file_path: Union[str, bytes, "os.PathLike"]) -> bool:
+        """
+        Check if a file is a PDF based on its extension.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            True if the file has a .pdf extension, False otherwise
+        """
+        if isinstance(file_path, (str, bytes)):
+            path_str = str(file_path)
+            return path_str.lower().endswith('.pdf')
+        elif hasattr(file_path, '__fspath__'):
+            path_str = os.fspath(file_path)
+            return path_str.lower().endswith('.pdf')
+        return False
+
+    @staticmethod
+    def _pdf_to_images(pdf_path: Union[str, bytes, "os.PathLike"]) -> List[Image.Image]:
+        """
+        Convert all pages of a PDF to PIL Images.
+
+        Args:
+            pdf_path: Path to the PDF file
+
+        Returns:
+            List of PIL Images, one per page
+
+        Raises:
+            ImportError: If PyMuPDF is not installed
+            RuntimeError: If the PDF cannot be opened
+        """
+        if not HAS_PYMUPDF:
+            raise ImportError(
+                "PyMuPDF is required for PDF support. "
+                "Install it with: pip install pymupdf"
+            )
+
+        images = []
+        try:
+            # Open the PDF
+            pdf_document = fitz.open(pdf_path)
+            
+            # Convert each page to an image
+            for page in pdf_document:
+                # Render page to an image (matrix for higher DPI)
+                # Using 2.0 scale factor for good quality (equivalent to 144 DPI)
+                mat = fitz.Matrix(2.0, 2.0)
+                pix = page.get_pixmap(matrix=mat)
+                
+                # Convert PyMuPDF pixmap to PIL Image
+                img_data = pix.tobytes("png")
+                img = Image.open(io.BytesIO(img_data)).convert("RGB")
+                images.append(img)
+            
+            pdf_document.close()
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to process PDF: {str(e)}") from e
+        
+        return images
+
     @torch.inference_mode()
     def _forward_core(self, x_nchw_channels_last: torch.Tensor) -> torch.Tensor:
         """
@@ -264,9 +338,31 @@ class DeepSeekOCREncoder(torch.nn.Module):
         return tokens + x_tok  # [B,N,1024]
 
     @torch.inference_mode()
-    def encode(self, image: Union[Image.Image, str, "os.PathLike"]) -> torch.Tensor:
+    def encode(self, image: Union[Image.Image, str, "os.PathLike"]) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
-        Encode an image into vision tokens.
+        Encode an image or PDF into vision tokens.
+
+        Args:
+            image: PIL Image, path to an RGB image file, or path to a PDF file
+
+        Returns:
+            - For single images: Vision tokens tensor of shape [1, N, 1024] where N=256 for 1024x1024 input
+            - For PDFs: List of vision token tensors, one per page, each of shape [1, N, 1024]
+        """
+        # Check if input is a PDF file
+        if isinstance(image, (str, bytes)) or hasattr(image, '__fspath__'):
+            if self._is_pdf(image):
+                # Convert PDF to images
+                images = self._pdf_to_images(image)
+                # Encode each page
+                return [self._encode_single_image(img) for img in images]
+        
+        # Single image encoding (original behavior)
+        return self._encode_single_image(image)
+
+    def _encode_single_image(self, image: Union[Image.Image, str, "os.PathLike"]) -> torch.Tensor:
+        """
+        Encode a single image into vision tokens.
 
         Args:
             image: PIL Image or path to an RGB image file
@@ -334,14 +430,15 @@ class DeepSeekOCREncoder(torch.nn.Module):
         self._static_in = static_in
         self._static_out = static_out
 
-    def __call__(self, image: Union[Image.Image, str, "os.PathLike"]) -> torch.Tensor:
+    def __call__(self, image: Union[Image.Image, str, "os.PathLike"]) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
-        Convenience method to encode an image.
+        Convenience method to encode an image or PDF.
 
         Args:
-            image: PIL Image or path to an RGB image file
+            image: PIL Image, path to an RGB image file, or path to a PDF file
 
         Returns:
-            Vision tokens tensor of shape [1, N, 1024]
+            - For single images: Vision tokens tensor of shape [1, N, 1024]
+            - For PDFs: List of vision token tensors, one per page, each of shape [1, N, 1024]
         """
         return self.encode(image)

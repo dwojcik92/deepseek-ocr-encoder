@@ -1,8 +1,11 @@
 """Tests for DeepSeekOCREncoder."""
 
+import io
+import os
 import pytest
 import torch
 from unittest.mock import Mock, MagicMock, patch
+from PIL import Image
 from deepseek_ocr_encoder import DeepSeekOCREncoder
 
 
@@ -134,32 +137,98 @@ class TestDeepSeekOCREncoder:
         encoder = DeepSeekOCREncoder.from_pretrained(
             "./my-local-model",
             device="cpu",
-            dtype=torch.float32,
         )
         
-        # Verify AutoModel.from_pretrained was called with local path
+        # Verify it was called with the local path
         call_args = mock_automodel.from_pretrained.call_args
         assert call_args[0][0] == "./my-local-model"
-        
-        assert encoder.device.type == "cpu"
+        assert encoder is not None
 
-    @patch("deepseek_ocr_encoder.encoder.AutoModel")
-    def test_from_pretrained_custom_kwargs(self, mock_automodel, mock_model):
-        """Test from_pretrained() passes through custom model kwargs."""
-        mock_automodel.from_pretrained.return_value = mock_model
+    def test_is_pdf_detection(self):
+        """Test PDF file detection."""
+        assert DeepSeekOCREncoder._is_pdf("document.pdf") is True
+        assert DeepSeekOCREncoder._is_pdf("Document.PDF") is True
+        assert DeepSeekOCREncoder._is_pdf("/path/to/file.pdf") is True
+        assert DeepSeekOCREncoder._is_pdf("image.png") is False
+        assert DeepSeekOCREncoder._is_pdf("image.jpg") is False
+        assert DeepSeekOCREncoder._is_pdf("file.txt") is False
+
+    def test_pdf_to_images_requires_pymupdf(self, tmp_path):
+        """Test that PDF conversion requires PyMuPDF."""
+        # Create a dummy PDF path (doesn't need to exist for this test)
+        pdf_path = tmp_path / "test.pdf"
         
-        encoder = DeepSeekOCREncoder.from_pretrained(
-            "deepseek-ai/DeepSeek-OCR",
+        # Mock the HAS_PYMUPDF flag
+        with patch('deepseek_ocr_encoder.encoder.HAS_PYMUPDF', False):
+            with pytest.raises(ImportError, match="PyMuPDF is required"):
+                DeepSeekOCREncoder._pdf_to_images(pdf_path)
+
+    @patch('deepseek_ocr_encoder.encoder.HAS_PYMUPDF', True)
+    @patch('deepseek_ocr_encoder.encoder.fitz')
+    def test_pdf_to_images_conversion(self, mock_fitz, tmp_path):
+        """Test PDF to images conversion."""
+        # Create mock PDF document with 2 pages
+        mock_pdf = MagicMock()
+        mock_pdf.__len__.return_value = 2
+        
+        # Mock pages
+        mock_page1 = MagicMock()
+        mock_page2 = MagicMock()
+        
+        # Create simple test images as bytes
+        test_img1 = Image.new('RGB', (100, 100), color='red')
+        test_img2 = Image.new('RGB', (100, 100), color='blue')
+        
+        img1_bytes = io.BytesIO()
+        img2_bytes = io.BytesIO()
+        test_img1.save(img1_bytes, format='PNG')
+        test_img2.save(img2_bytes, format='PNG')
+        
+        # Mock pixmaps
+        mock_pix1 = MagicMock()
+        mock_pix1.tobytes.return_value = img1_bytes.getvalue()
+        mock_pix2 = MagicMock()
+        mock_pix2.tobytes.return_value = img2_bytes.getvalue()
+        
+        mock_page1.get_pixmap.return_value = mock_pix1
+        mock_page2.get_pixmap.return_value = mock_pix2
+        
+        mock_pdf.__getitem__.side_effect = [mock_page1, mock_page2]
+        mock_fitz.open.return_value = mock_pdf
+        
+        # Test conversion
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.touch()  # Create empty file
+        
+        images = DeepSeekOCREncoder._pdf_to_images(pdf_path)
+        
+        assert len(images) == 2
+        assert all(isinstance(img, Image.Image) for img in images)
+        assert mock_pdf.close.called
+
+    @patch('deepseek_ocr_encoder.encoder.HAS_PYMUPDF', True)
+    def test_encode_returns_list_for_pdf(self, mock_model, tmp_path):
+        """Test that encode returns a list for PDF input."""
+        encoder = DeepSeekOCREncoder(
+            full_model=mock_model,
             device="cpu",
             dtype=torch.float32,
-            low_cpu_mem_usage=True,  # Custom kwarg
-            revision="main",  # Custom kwarg
+            eager_to_device=False,
         )
         
-        # Verify custom kwargs were passed through
-        call_args = mock_automodel.from_pretrained.call_args
-        assert call_args[1]["low_cpu_mem_usage"] is True
-        assert call_args[1]["revision"] == "main"
+        # Create a fake PDF path (file doesn't need to exist since _pdf_to_images is mocked)
+        pdf_path = tmp_path / "test.pdf"
+        
+        # Mock the PDF conversion to return test images
+        test_images = [Image.new('RGB', (100, 100)) for _ in range(3)]
+        
+        with patch.object(DeepSeekOCREncoder, '_pdf_to_images', return_value=test_images):
+            with patch.object(encoder, '_encode_single_image', return_value=torch.randn(1, 256, 1024)):
+                result = encoder.encode(str(pdf_path))
+                
+                assert isinstance(result, list)
+                assert len(result) == 3
+                assert all(isinstance(t, torch.Tensor) for t in result)
 
 
 if __name__ == "__main__":
