@@ -2,6 +2,19 @@
 
 
 
+## v1.0.1 (2025-10-23)
+
+### Fix
+
+* fix: set default value for resize_size in simple usage example ([`e751b37`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/e751b3736368104cf72ac3d767d75c10e742a1ea))
+
+### Unknown
+
+* Merge pull request #10 from dwojcik92/feat/configurable-preprocessing-hooks
+
+fix: set default value for resize_size in simple usage example ([`8c3fc47`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/8c3fc470d09c81b9df384c46b910abcbcd979978))
+
+
 ## v1.0.0 (2025-10-23)
 
 ### Breaking
