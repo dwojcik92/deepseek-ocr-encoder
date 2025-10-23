@@ -36,6 +36,10 @@ class TestDeepSeekOCREncoder:
         base.vision_model = vision
         mock.base_model = base
         
+        # Make eval() and to() return self to support chaining
+        mock.eval.return_value = mock
+        mock.to.return_value = mock
+        
         return mock
 
     def test_encoder_initialization(self, mock_model):
