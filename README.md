@@ -11,6 +11,18 @@ A handy and elastic encoder for vision tasks based on DeepSeek-OCR. This package
 - 🔧 **Flexible**: Configurable device, dtype, and optimization settings
 - 📄 **PDF Support**: Encode multi-page PDF documents with automatic page-to-image conversion
 
+## About DeepSeek-OCR
+
+This encoder is based on [DeepSeek-OCR](https://github.com/deepseek-ai/DeepSeek-OCR), a state-of-the-art vision-language model designed for optical character recognition and document understanding. The recent paper ["DeepSeek-OCR: Contexts Optical Compression"](https://arxiv.org/html/2510.18234v1) (arXiv:2510.18234v1) introduces innovative optical compression techniques for long text contexts using vision tokens.
+
+**Key highlights from the paper:**
+- 📊 **High Precision OCR**: Achieves up to ~97% OCR precision at less than 10× compression
+- 🗜️ **Efficient Compression**: Maintains ~60% precision even at 20× compression ratios
+- 📈 **Strong Benchmark Results**: Significant improvements on OmniDocBench
+- ⚡ **High-Throughput Data Generation**: Enables efficient processing of large document datasets
+
+This encoder package provides an optimized implementation for extracting vision tokens from the DeepSeek-OCR model, making it easy to integrate into your own applications.
+
 ## Installation
 
 ### Using uv (recommended)
@@ -34,6 +46,23 @@ pip install -e .
 ```
 
 ## Quick Start
+
+### Simple One-Line Initialization (Recommended)
+
+```python
+from deepseek_ocr_encoder import DeepSeekOCREncoder
+
+# One-line initialization - automatically handles device, dtype, and model loading
+encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR")
+
+# Encode an image
+vision_tokens = encoder("your_image.png")
+# Returns: torch.Tensor of shape [1, N, 1024] where N=256 for 1024x1024 input
+```
+
+### Advanced Usage with Manual Model Loading
+
+If you need more control over the model loading process:
 
 ```python
 from transformers import AutoModel
@@ -91,6 +120,44 @@ for page_num, page_tokens in enumerate(vision_tokens_list):
 
 The main encoder class that wraps the DeepSeek-OCR model for efficient vision token extraction.
 
+#### Class Methods
+
+##### `from_pretrained(model_name_or_path: str, **kwargs) -> DeepSeekOCREncoder`
+
+**(Recommended)** Load a DeepSeek-OCR model and wrap it with the optimized encoder in one line.
+
+**Parameters:**
+- `model_name_or_path` (str, required): Model identifier from Hugging Face Hub (e.g., "deepseek-ai/DeepSeek-OCR") or path to a local checkpoint
+- `device` (Optional[Union[str, torch.device]]): Target device (default: auto-detect cuda if available, else cpu)
+- `dtype` (Optional[torch.dtype]): Data type for computation (default: bfloat16 on cuda, float32 on cpu)
+- `freeze` (bool): Whether to freeze encoder parameters (default: True)
+- `eager_to_device` (bool): Move model to device immediately (default: True)
+- `precompute_pos_for_1024` (bool): Pre-compute position embeddings for 1024x1024 input (default: True)
+- `use_compile` (bool): Enable torch.compile for better performance (requires PyTorch 2.3+, default: False)
+- `trust_remote_code` (bool): Whether to trust remote code when loading model (default: True)
+- `use_safetensors` (bool): Whether to use safetensors format (default: True)
+- `attn_implementation` (str): Attention implementation to use (default: "eager")
+- `**model_kwargs`: Additional keyword arguments passed to AutoModel.from_pretrained()
+
+**Returns:**
+- Initialized `DeepSeekOCREncoder` ready for inference
+
+**Example:**
+```python
+# Simple usage
+encoder = DeepSeekOCREncoder.from_pretrained("deepseek-ai/DeepSeek-OCR")
+
+# With custom device/dtype
+encoder = DeepSeekOCREncoder.from_pretrained(
+    "deepseek-ai/DeepSeek-OCR",
+    device="cpu",
+    dtype=torch.float32
+)
+
+# From local checkpoint
+encoder = DeepSeekOCREncoder.from_pretrained("./my-finetuned-model")
+```
+
 #### Constructor Parameters
 
 - `full_model` (required): The full DeepSeek-OCR model loaded from transformers
@@ -101,7 +168,7 @@ The main encoder class that wraps the DeepSeek-OCR model for efficient vision to
 - `precompute_pos_for_1024` (bool): Pre-compute position embeddings for 1024x1024 input (default: True)
 - `use_compile` (bool): Enable torch.compile for better performance (requires PyTorch 2.3+)
 
-#### Methods
+#### Instance Methods
 
 ##### `encode(image: Union[Image.Image, str, os.PathLike]) -> Union[torch.Tensor, List[torch.Tensor]]`
 
@@ -193,15 +260,28 @@ MIT
 
 ## Citation
 
-If you use this encoder in your research, please cite the original DeepSeek-OCR paper:
+If you use this encoder in your research, please cite the DeepSeek-OCR papers:
 
 ```bibtex
+@article{deepseek-ocr-compression,
+  title={DeepSeek-OCR: Contexts Optical Compression},
+  author={DeepSeek-AI},
+  journal={arXiv preprint arXiv:2510.18234},
+  year={2025}
+}
+
 @article{deepseek-ocr,
   title={DeepSeek-OCR: Efficient Vision-Language Model for OCR},
   author={DeepSeek-AI},
   year={2024}
 }
 ```
+
+## Resources
+
+- 📄 **Paper**: [DeepSeek-OCR: Contexts Optical Compression](https://arxiv.org/html/2510.18234v1) (arXiv:2510.18234v1)
+- 💻 **Official Repository**: [DeepSeek-OCR on GitHub](https://github.com/deepseek-ai/DeepSeek-OCR)
+- 🤗 **Model**: [deepseek-ai/DeepSeek-OCR on Hugging Face](https://huggingface.co/deepseek-ai/DeepSeek-OCR)
 
 ## Contributing
 
