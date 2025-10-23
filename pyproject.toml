@@ -8,7 +8,8 @@ authors = [
     { name = "Dariusz Wojcik", email = "dariusz.patryk.wojcik@gmail.com" }
 ]
 license = { text = "MIT" }
-keywords = ["deepseek", "ocr", "vision", "encoder", "clip", "sam"]
+keywords = ["deepseek", "deepseek-ocr", "ocr", "vision-encoder",
+            "pytorch", "transformers", "huggingface", "sam", "clip"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -34,6 +35,15 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dwojcik92/deepseek-ocr-encoder"
+Repository = "https://github.com/dwojcik92/deepseek-ocr-encoder"
+Issues = "https://github.com/dwojcik92/deepseek-ocr-encoder/issues"
+Documentation = "https://github.com/dwojcik92/deepseek-ocr-encoder#readme"
+
+[project]
+
 
 [build-system]
 requires = ["hatchling"]

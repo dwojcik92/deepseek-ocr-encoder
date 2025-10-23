@@ -17,19 +17,19 @@ A handy and elastic encoder for vision tasks based on DeepSeek-OCR. This package
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd qwen-ocr-encoder
+cd deepseek-ocr-encoder
 
 # Install with uv
-uv pip install -e .
+uv pip install .
 
 # Or install with dev dependencies
-uv pip install -e ".[dev]"
+uv pip install ".[dev]"
 ```
 
 ### Using pip
 
 ```bash
-pip install -e .
+pip install .
 ```
 
 ## Quick Start
