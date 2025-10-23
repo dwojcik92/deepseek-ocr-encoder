@@ -22,7 +22,7 @@ class TestCustomPreprocessingHooks:
         base.sam_model.return_value = torch.randn(1, 1024, 16, 16)
         
         vision = MagicMock()
-        vision.pre_layrnorm = MagicMock()
+        vision.pre_layernorm = MagicMock()
         vision.transformer = MagicMock()
         vision.transformer.return_value = torch.randn(1, 256, 1024)
         
