@@ -11,7 +11,7 @@ These features enable users to customize the preprocessing pipeline without fork
 """
 
 import torch
-from PIL import Image
+from PIL import Image, ImageFilter
 from torchvision import transforms
 from deepseek_ocr_encoder import DeepSeekOCREncoder
 
@@ -177,23 +177,24 @@ def document_preprocessing(img: Image.Image) -> torch.Tensor:
     """
     Specialized preprocessing for document images:
     - Convert to grayscale and back to RGB (simulate document scanning)
-    - Apply sharpening filter
+    - Apply sharpening filter for better text recognition
     - Standard resize and normalize
     """
     # Convert to grayscale and back (simulates scanned document)
     img_gray = img.convert('L').convert('RGB')
     
+    # Apply sharpening filter for better text recognition
+    img_sharp = img_gray.filter(ImageFilter.SHARPEN)
+    
     transform = transforms.Compose([
         transforms.Resize((1024, 1024), interpolation=transforms.InterpolationMode.BICUBIC),
-        # Sharpen for better text recognition
-        transforms.Lambda(lambda x: x),  # Placeholder for custom sharpening
         transforms.ToTensor(),
         transforms.Normalize(
             mean=(0.48145466, 0.4578275, 0.40821073),
             std=(0.26862954, 0.26130258, 0.27577711)
         ),
     ])
-    return transform(img_gray)
+    return transform(img_sharp)
 
 
 encoder_document = DeepSeekOCREncoder.from_pretrained(
