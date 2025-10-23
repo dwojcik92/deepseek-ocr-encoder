@@ -2,7 +2,17 @@
 
 
 
+## v0.0.2 (2025-10-23)
+
+### Fix
+
+* fix: clone output tensor to prevent buffer reuse in encoder ([`5b4285b`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/5b4285b8a663b9a120da28d92a4caa6ead364971))
+
+
 ## v0.0.1 (2025-10-23)
+
+
+## v0.2.0 (2025-10-23)
 
 ### Ci
 
