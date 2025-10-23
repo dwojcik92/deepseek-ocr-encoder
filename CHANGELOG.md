@@ -2,6 +2,69 @@
 
 
 
+## v1.0.0 (2025-10-23)
+
+### Breaking
+
+* feat: add configurable preprocessing hooks
+
+This commit adds support for custom preprocessing transforms and exposes
+resize/normalization parameters, allowing users to:
+
+- Configure custom resize dimensions (including native resolution support)
+- Customize normalization parameters (e.g., ImageNet vs CLIP)
+- Inject custom preprocessing transforms for domain-specific pipelines
+- Process pre-preprocessed tensors directly
+- Fine-tune interpolation modes and quality settings
+
+Key Features:
+- preprocessing_transform: inject custom transform functions
+- resize_size: configurable dimensions or None for native resolution
+- resize_interpolation: BICUBIC, LANCZOS, BILINEAR, etc.
+- normalization_mean/std: custom normalization parameters
+- skip_default_preprocessing: accept pre-processed tensors
+
+This enables reusing existing preprocessing pipelines without forking
+the codebase while maintaining full backward compatibility.
+
+BREAKING CHANGE: None - all changes are opt-in with backward compatible defaults ([`b3dcb37`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/b3dcb3745f9f269f8377f767696f5b41ea5208b7))
+
+### Fix
+
+* fix: enhance document preprocessing with sharpening filter for better text recognition ([`005875d`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/005875dc254217988dc3fd4515d882f91c0081cc))
+
+* fix: set default value for resize_size in DeepSeekOCREncoder ([`8e4eb7e`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/8e4eb7e7909b1974e362c08c991a733b41e67ff8))
+
+* fix: enable method chaining for mock model in tests ([`8c85448`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/8c85448d12ad5b8b7fe1ca91b1b0c1ce64e236fb))
+
+* fix: update mock position embeddings to use a detachable tensor ([`e295743`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/e2957437d6eb04946b5ffba76d14b43ba1a0c58f))
+
+### Unknown
+
+* Merge pull request #9 from dwojcik92/feat/configurable-preprocessing-hooks
+
+feat: add configurable preprocessing hooks for custom image transformations ([`79ed4b4`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/79ed4b4a0ea3d15c0b82ed121dd2a4d1775d409e))
+
+* Update tests/test_custom_preprocessing.py
+
+Co-authored-by: Copilot &lt;175728472+Copilot@users.noreply.github.com&gt; ([`7a729b2`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/7a729b2b318a674472bd12cc24034c4e419f0905))
+
+* Update tests/test_encoder.py
+
+Co-authored-by: Copilot &lt;175728472+Copilot@users.noreply.github.com&gt; ([`b6f7eee`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/b6f7eee7181ad7fc8a19840fa6c7c6dd78d544b1))
+
+
+## v0.2.1 (2025-10-23)
+
+### Fix
+
+* fix: clone CUDA graph output buffer to prevent data corruption
+
+When CUDA graph is captured, successive encode calls would return the same
+tensor buffer, causing silent data corruption when storing multiple results.
+Now returns a clone of the static output buffer. ([`5be369f`](https://github.com/dwojcik92/deepseek-ocr-encoder/commit/5be369fd1068a756c265568457dcfc662de79bc9))
+
+
 ## v0.0.2 (2025-10-23)
 
 ### Fix
