@@ -45,6 +45,12 @@ uv pip install ".[dev]"
 pip install .
 ```
 
+**Important:** This package requires `transformers>=4.30.0,<4.48.0`. The installation will automatically install a compatible version. If you have a newer version of transformers already installed, you may need to downgrade:
+
+```bash
+pip install 'transformers>=4.30.0,<4.48.0'
+```
+
 ## Quick Start
 
 ### Simple One-Line Initialization (Recommended)
@@ -234,9 +240,46 @@ This encoder includes several optimizations:
 - Python ≥ 3.10
 - PyTorch ≥ 2.0.0
 - torchvision ≥ 0.15.0
-- transformers ≥ 4.30.0
+- **transformers ≥ 4.30.0, < 4.48.0** (see [Troubleshooting](#troubleshooting) for details)
 - Pillow ≥ 9.0.0
 - PyMuPDF ≥ 1.23.0 (for PDF support)
+
+> **Note:** The package requires transformers version < 4.48.0 due to API changes in newer versions. We recommend using transformers==4.47.0 for optimal compatibility.
+
+## Troubleshooting
+
+### ImportError: cannot import name 'LlamaFlashAttention2'
+
+If you encounter this error:
+```
+ImportError: cannot import name 'LlamaFlashAttention2' from 'transformers.models.llama.modeling_llama'
+```
+
+This is caused by incompatible transformers versions. The `LlamaFlashAttention2` class was removed in transformers 4.48.0 and later versions.
+
+**Solution:**
+
+Install a compatible version of transformers:
+```bash
+pip install 'transformers>=4.30.0,<4.48.0'
+```
+
+We recommend using transformers==4.47.0:
+```bash
+pip install transformers==4.47.0
+```
+
+**Why this happens:**
+
+The DeepSeek-OCR model uses specific attention mechanisms that were refactored in transformers 4.48.0+. The model code (loaded via `trust_remote_code=True`) references `LlamaFlashAttention2`, which is only available in transformers versions 4.30.0 through 4.47.x.
+
+### Version Validation
+
+When you import the package, it will automatically check your transformers version and display a warning if an incompatible version is detected:
+
+```python
+from deepseek_ocr_encoder import DeepSeekOCREncoder  # Warning displayed if version incompatible
+```
 
 ## Development
 
