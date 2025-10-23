@@ -22,13 +22,15 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "torch>=2.4.0",
+    "torch>=2.8.0",
     "torchvision>=0.15.0",
     "transformers>=4.30.0,<4.48.0",
     "pillow>=9.0.0",
     "packaging>=20.0",
     "pymupdf>=1.23.0",
     "addict>=2.4.0",
+    "einops==0.8.1",
+    "easydict==1.13",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +44,7 @@ dev = [
 [tool.semantic_release]
 branch = "main"
 version_toml = ["pyproject.toml:project.version"]
-build_command = "python -m build"
+build_command = "python -m pip install --upgrade pip build && python -m build"
 upload_to_pypi = true
 
 [project.urls]
