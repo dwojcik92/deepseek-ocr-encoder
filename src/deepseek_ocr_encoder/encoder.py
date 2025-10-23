@@ -384,7 +384,7 @@ class DeepSeekOCREncoder(torch.nn.Module):
         if self._graph is not None:
             self._static_in.copy_(x)  # copy into static buffer
             self._graph.replay()
-            return self._static_out
+            return self._static_out.clone()  # Clone to prevent reuse of the same buffer
 
         # Compiled path if enabled; otherwise plain
         if self._compiled is not None:
