@@ -27,7 +27,7 @@ class TestDeepSeekOCREncoder:
         vision.transformer = MagicMock()
         vision.transformer.return_value = torch.randn(1, 256, 1024)
         
-        # Mock position embeddings - need actual tensor that can be registered as buffer
+        # Mock position embeddings with detach() support for buffer registration
         pos_weight = torch.randn(257, 1024)
         mock_weight = MagicMock()
         mock_weight.detach.return_value = pos_weight
