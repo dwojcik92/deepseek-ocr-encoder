@@ -28,6 +28,7 @@ dependencies = [
     "pillow>=9.0.0",
     "packaging>=20.0",
     "pymupdf>=1.23.0",
+    "addict>=2.4.0",
 ]
 
 [project.optional-dependencies]

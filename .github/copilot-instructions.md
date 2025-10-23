@@ -126,6 +126,7 @@ The package requires `transformers>=4.30.0,<4.48.0`. This is due to breaking cha
 - transformers >= 4.30.0, < 4.48.0
 - pillow >= 9.0.0
 - pymupdf >= 1.23.0 (for PDF support)
+- addict >= 2.4.0 (required by DeepSeek-OCR model)
 
 ## Testing
 
