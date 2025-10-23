@@ -38,6 +38,12 @@ dev = [
     "mypy>=1.0.0",
 ]
 
+[tool.semantic_release]
+branch = "main"
+version_toml = ["pyproject.toml:project.version"]
+build_command = "python -m build"
+upload_to_pypi = true
+
 [project.urls]
 Homepage = "https://github.com/dwojcik92/deepseek-ocr-encoder"
 Repository = "https://github.com/dwojcik92/deepseek-ocr-encoder"
