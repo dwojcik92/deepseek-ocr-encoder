@@ -336,8 +336,8 @@ This encoder includes several optimizations:
 
 ## Requirements
 
-- Python ≥ 3.10
-- PyTorch ≥ 2.0.0
+- Python ≥ 3.12 (enforced by the package metadata)
+- PyTorch ≥ 2.8.0
 - torchvision ≥ 0.15.0
 - **transformers ≥ 4.30.0, < 4.48.0** (see [Troubleshooting](#troubleshooting) for details)
 - Pillow ≥ 9.0.0
